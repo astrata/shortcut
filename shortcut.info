@@ -1,0 +1,5 @@
+; $Id$
+name = Keyboard shortcuts
+description = Allow keyboard shortcuts assignments in the page.
+package = AchieveInternet
+version = 1.0
