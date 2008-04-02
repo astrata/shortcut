@@ -33,11 +33,22 @@ function shortcut_perm() {
 }
 
 /**
+ * Help hook
+ */
+function shortcut_help($section) {
+  switch($section) {
+    case 'admin/settings/shortcut':
+      return t('Shortcuts enable the posibility to assign keyboard shortcuts to an action or a link.');
+  }
+}
+
+/**
  * Access hook
  */
 function shortcut_access($op, $node) {
-  if ($op == 'create')
-  return user_access('admin shortcuts');
+  if ($op == 'create') {
+    return user_access('admin shortcuts');
+  }
 
   return (user_access('view shortcuts'));
 }
@@ -55,8 +66,7 @@ function shortcut_menu($may_cache) {
     $items[] = array(
         'path' => 'admin/settings/shortcut',
         'title' => 'Keyboard Shortcuts',
-        'callback' => 'drupal_get_form',
-        'callback arguments' => array('shortcut_page_form'),
+        'callback' => 'shortcut_page_form',
         'access' => user_access('admin shortcuts'),
         'description' => t('Administer the keyboard shortcuts that can be used in the site.'),
     );
@@ -67,36 +77,9 @@ function shortcut_menu($may_cache) {
 /**
  * Create the shortcuts page form
  */
-function shortcut_page_form(){
-  $form = array();
+function shortcut_page_form() {
   $shortcuts = shortcut_get_list();
-  foreach($shortcuts as $shortcut){
-    $form[$shortcut['nid']] = array(
-        '#type' => 'fieldset', 
-        '#title' => t('Shortcut'), 
-    );
-    $form[$shortcut['nid']]['description'] = array(
-        '#type' => 'item', 
-        '#title' => t('Description'), 
-        '#value' => $shortcut['title'],
-    );
-    $form[$shortcut['nid']]['shortcut'] = array(
-        '#type' => 'item', 
-        '#title' => t('Shortcut'), 
-        '#value' => shortcut_shortcut_to_string($shortcut),
-    );
-    $form[$shortcut['nid']]['actions'] = array(
-        '#type' => 'item', 
-        '#title' => t('Actions'), 
-        '#value' => l(t('Edit'), 'node/'.$shortcut['nid'].'/edit') 
-    . '|' . l(t('Delete'), 'node/'.$shortcut['nid'].'/delete'),
-    );
-  }
-  $form['test'] = array(
-      '#type' => 'item', 
-      '#value' => l(t('Add a new shortcut'), 'node/add/shortcut'),
-  );
-  return $form;
+  return theme('shortcut_admin_list', $shortcuts);
 }
 
 /**
@@ -113,14 +96,14 @@ function shortcut_form($node) {
       '#description' => t('A description about what this shortcut does.'),
   );
   $form['key_masks_values'] = array(
-		'#type' => 'checkboxes',
-		'#title' => t('Meta Keys'),
-		'#default_value' => explode(',', $node->keys_mask),
-		'#required' => FALSE,
-	    '#options' => array(
-	       'alt' => t('ALT Key'), 
-	       'ctrl' => t('CTRL Key'), 
-	       'shift' => t('SHIFT Key')
+        '#type' => 'checkboxes',
+        '#title' => t('Meta Keys'),
+        '#default_value' => explode(',', $node->keys_mask),
+        '#required' => FALSE,
+        '#options' => array(
+           'alt' => t('ALT Key'), 
+           'ctrl' => t('CTRL Key'), 
+           'shift' => t('SHIFT Key')
   ),
         '#description' => t('You can specify which meta keys are part of the shortcut.'),
   );
@@ -130,36 +113,36 @@ function shortcut_form($node) {
         '#description' => t('Key letter or code to use. Only one can be used at the same time.'),
   );
   $form['key']['char_text'] = array(
-		'#type' => 'textfield',
-		'#title' => t('Letter'),
-		'#default_value' => $node->char_text,
-		'#maxlength' => 1,
+        '#type' => 'textfield',
+        '#title' => t('Letter'),
+        '#default_value' => $node->char_text,
+        '#maxlength' => 1,
         '#size' => 1,
-		'#required' => FALSE,
+        '#required' => FALSE,
         '#attributes' => array('style' => 'width: 1em'),
         '#description' => t('If the shortcut uses a letter enter it here'),
   );
   $form['key']['char_code'] = array(
-		'#type' => 'select',
-		'#title' => t('Character Code'),
-		'#default_value' => $node->char_code,
-		'#required' => FALSE,
-	    '#options' => get_key_codes_array(),
+        '#type' => 'select',
+        '#title' => t('Character Code'),
+        '#default_value' => $node->char_code,
+        '#required' => FALSE,
+        '#options' => get_key_codes_array(),
         '#description' => t('If the shortcut uses a key code selected it here'),
   );
   $form['s_type'] = array(
-		'#type' => 'select',
-		'#title' => t('Type of action or URL'),
-		'#default_value' => $node->s_type,
-		'#required' => TRUE,
-	    '#options' => array('function' => t('Call a JS function'), 'path' => t('Go to an internal URL'), 'external_path' => t('Go to an external URL')),
+        '#type' => 'select',
+        '#title' => t('Type of action or URL'),
+        '#default_value' => $node->s_type,
+        '#required' => TRUE,
+        '#options' => array('function' => t('Call a JS function'), 'path' => t('Go to an internal URL'), 'external_path' => t('Go to an external URL')),
         '#description' => t('The type of action that will be executed when the shortcut get raised, it can be a call to a javascript function, or go to an internal drupal address or go to an externa internet address.'),
   );
   $form['s_action'] = array(
-		'#type' => 'textfield',
-		'#title' => t('Action to take'),
-		'#default_value' => $node->s_action,
-		'#required' => TRUE,
+        '#type' => 'textfield',
+        '#title' => t('Action to take'),
+        '#default_value' => $node->s_action,
+        '#required' => TRUE,
         '#description' => t('The action to be taken depends on the type of action, if the type is "Call a JS function" then enter here the name of the function, if the type is an internal address entered here (for example "node/25") and if the type is an external address entered here and include the http://.'),
   );
   return $form;
@@ -170,10 +153,10 @@ function shortcut_form($node) {
  */
 function shortcut_insert($node) {
   db_query('
-  	INSERT INTO {shortcut}
-  	(nid, keys_mask, char_text, char_code, s_type, s_action)
-  	VALUES
-  	(%d, \'%s\', \'%s\', %s, \'%s\', \'%s\')
+    INSERT INTO {shortcut}
+    (nid, keys_mask, char_text, char_code, s_type, s_action)
+    VALUES
+    (%d, \'%s\', \'%s\', %s, \'%s\', \'%s\')
   ' , $node->nid, shortcut_implode_masks($node->key_masks_values), $node->char_text
   , (empty($node->char_code)?'null':$node->char_code)
   , $node->s_type, $node->s_action);
@@ -184,13 +167,13 @@ function shortcut_insert($node) {
  */
 function shortcut_update($node) {
   db_query('
-  	UPDATE {shortcut}
-  	SET keys_mask = \'%s\', 
-  	char_text = \'%s\', 
-  	char_code = %s, 
-  	s_type = \'%s\', 
-  	s_action = \'%s\'
-  	WHERE nid = %d
+    UPDATE {shortcut}
+    SET keys_mask = \'%s\', 
+    char_text = \'%s\', 
+    char_code = %s, 
+    s_type = \'%s\', 
+    s_action = \'%s\'
+    WHERE nid = %d
   '
   , shortcut_implode_masks($node->key_masks_values), $node->char_text
   , (empty($node->char_code)?'null':$node->char_code)
@@ -219,21 +202,21 @@ function shortcut_load($node) {
  * There is a block to show the actual shortcuts.
  */
 function shortcut_block($op = 'list', $delta = 0, $edit = array()) {
-  switch($op) {
+  switch ($op) {
     case 'list':
       $blocks[0] = array(
-      	'info' => t('The list of shortcuts'),
-      	'weight' => 0, 
-      	'enabled' => 1, 
-      	'region' => 'right',
+        'info' => t('The list of shortcuts'),
+        'weight' => 0, 
+        'enabled' => 1, 
+        'region' => 'right',
       );
       return $blocks;
       break;
     case 'view':
-      switch($delta) {
+      switch ($delta) {
         case 0:
           $block = array(
-          	'subject' => t('Shortcuts'),
+            'subject' => t('Shortcuts'),
             'content' => shortcut_display_block_shortcuts(), 
           );
           break;
@@ -246,9 +229,9 @@ function shortcut_block($op = 'list', $delta = 0, $edit = array()) {
 /**
  * Theme for the shortcuts block.
  */
-function theme_shortcut_block($shortcuts = array()){
+function theme_shortcut_block($shortcuts = array()) {
   $output = '<div class=\'shortcuts-block\'> <ul>';
-  foreach($shortcuts as $shortcut){
+  foreach ($shortcuts as $shortcut) {
     $shortcut_string = shortcut_shortcut_to_string($shortcut);
     $output .= '<li><span class=\'shortcuts-keys\'>'
     .$shortcut_string.':</span> <span class=\'shortcuts-description\'>'
@@ -258,19 +241,21 @@ function theme_shortcut_block($shortcuts = array()){
   return $output;
 }
 
-/**
- * Theme for the shortcuts page
- */
-function theme_shortcut_page($shortcuts = array()){
-  $output = '';
-  $output .= '<div class=\'shortcuts-block\'> <ul>';
-  foreach($shortcuts as $shortcut){
+function theme_shortcut_admin_list($shortcuts = array()) {
+  $headers = array(t('Shortcut'), t('Description'), t('Actions'));
+  $rows = array();
+  foreach ($shortcuts as $shortcut) {
     $shortcut_string = shortcut_shortcut_to_string($shortcut);
-    $output .= '<li><span class=\'shortcuts-keys\'>'
-    .$shortcut_string.':</span> <span class=\'shortcuts-description\'>'
-    .$shortcut['title'].'</span></li>';
+    $rows[] = array(
+        $shortcut_string,
+        $shortcut['title'],
+        l(t('Edit'), 'node/' . $shortcut['nid'] . '/edit', drupal_get_destination()) 
+        . ' | '
+        . l(t('Remove'), 'node/' . $shortcut['nid'] . '/delete', drupal_get_destination())
+      );
   }
-  $output .= '</ul> </div>';
+  $output = l(t('Add a new shortcut'), 'node/add/shortcut', drupal_get_destination());
+  $output .= theme('table', $headers, $rows, array('class' => 'shortcut_admin_list'));
   return $output;
 }
 
@@ -285,14 +270,14 @@ function shortcut_display_block_shortcuts() {
 /**
  * Get an array of arrays containing the actual shortcuts.
  */
-function shortcut_get_list(){
+function shortcut_get_list() {
   $shortcuts = array();
   $res = db_query('
     SELECT s.nid, s.keys_mask, s.char_text, s.char_code, s.s_type, s.s_action, n.title
     FROM {shortcut} s
         INNER JOIN {node_revisions} n ON s.nid = n.nid 
   ');
-  while($row = db_fetch_array($res)) {
+  while ($row = db_fetch_array($res)) {
     $shortcuts[] = $row;
   }
   return $shortcuts;
@@ -316,7 +301,7 @@ function shortcut_load_scripts() {
   while ($row = db_fetch_array($res)) {
     $masks = split(',', $row['keys_mask']);
     if (empty($row['char_code'])) {
-      $shortcuts_script .= 'shortcutsPress.push({alt:'.(in_array('alt', $masks)?'true':'false')
+      $shortcuts_script .= 'shortcutsPress.push({alt:' . (in_array('alt', $masks) ? 'true' : 'false')
       .', ctrl:'.(in_array('ctrl', $masks)?'true':'false')
       .', shift:'.(in_array('shift', $masks)?'true':'false')
       .', win:'.(in_array('win', $masks)?'true':'false')
@@ -325,7 +310,7 @@ function shortcut_load_scripts() {
       .'", param:"'.($row['s_type'] == 'function'?'':$row['s_action']).'" });'.chr(13);
     }
     else {
-      $shortcuts_script .= 'shortcutsDown.push({alt:'.(in_array('alt', $masks)?'true':'false')
+      $shortcuts_script .= 'shortcutsDown.push({alt:' . (in_array('alt', $masks) ? 'true' : 'false')
       .', ctrl:'.(in_array('ctrl', $masks)?'true':'false')
       .', shift:'.(in_array('shift', $masks)?'true':'false')
       .', win:'.(in_array('win', $masks)?'true':'false')
@@ -335,7 +320,7 @@ function shortcut_load_scripts() {
     }
   }
   drupal_add_js($shortcuts_script, 'inline');
-  drupal_add_js('shortcuts_parent_path = "'.url('/', null, null, false).'";','inline');
+  drupal_add_js('shortcuts_parent_path = "' . url('/', null, null, false) . '";', 'inline');
 }
 
 /**
@@ -343,7 +328,7 @@ function shortcut_load_scripts() {
  *
  * @return array key codes and name array
  */
-function get_key_codes_array(){
+function get_key_codes_array() {
   return array(
   '' => '',
   8 => 'BACKSPACE',
@@ -400,11 +385,11 @@ function get_key_codes_array(){
  * The format is if any meta key then printed and at the end the key all 
  * separated with a + sign. For example CTRL+ALT+C.
  */
-function shortcut_shortcut_to_string($shortcut = array()){
+function shortcut_shortcut_to_string($shortcut = array()) {
   $codes_array = get_key_codes_array();
   $masks_string = shortcut_get_mask_array($shortcut['keys_mask']);
-  if($shortcut['char_code']) {
-    if(array_key_exists($shortcut['char_code'], $codes_array)){
+  if ($shortcut['char_code']) {
+    if (array_key_exists($shortcut['char_code'], $codes_array)) {
       $char = $codes_array[$shortcut['char_code']];
     }
     else {
@@ -420,11 +405,11 @@ function shortcut_shortcut_to_string($shortcut = array()){
 /**
  * Return a string of the meta keys formated from a shortcut.
  */
-function shortcut_get_mask_array($mask_list){
+function shortcut_get_mask_array($mask_list) {
   $masks_string = '';
   $masks = split(',', $mask_list);
-  foreach($masks as $mask){
-    switch($mask){
+  foreach ($masks as $mask) {
+    switch ($mask) {
       case 'alt':
         $masked_text = t('ALT') . '+';
         break;
@@ -449,15 +434,15 @@ function shortcut_get_mask_array($mask_list){
  * Take an array of meta keys and format it as they need to be to insert in the
  * database field.
  */
-function shortcut_implode_masks($masks_array){
-  if(count($masks_array) == 0){
+function shortcut_implode_masks($masks_array) {
+  if (count($masks_array) == 0) {
     return '';
   }
   $masks_texts = '';
   $count_added = 0;
-  foreach($masks_array as $mask){
-    if(!$mask == 0){
-      $masks_texts .= ($count_added>0?',':'')."$mask";
+  foreach ($masks_array as $mask) {
+    if (!$mask == 0) {
+      $masks_texts .= ($count_added>0 ? ',' : '') . "$mask";
       $count_added++;
     }
   }
