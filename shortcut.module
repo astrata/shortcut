@@ -9,6 +9,15 @@
  * AchieveInternet http://www.achieveinternet.com.
  */
 
+define('SHORTCUT_TYPE_PATH',        0);
+define('SHORTCUT_TYPE_FUNCTION',    1);
+define('SHORTCUT_TYPE_EXTERNAL',    2);
+
+define('SHORTCUT_MASK_ALT',         1);
+define('SHORTCUT_MASK_CTRL',        2);
+define('SHORTCUT_MASK_SHIFT',       4);
+define('SHORTCUT_MASK_WIN',         8);
+
 /**
  * Node info Hook
  */
@@ -21,7 +30,7 @@ function shortcut_node_info() {
       'has_body' => false,
       'title_label' => t('Description'),
       'description' => t("A keyboard shortcut to an internal or external page or a javascript function."),
-  )
+    )
   );
 }
 
@@ -45,33 +54,32 @@ function shortcut_help($section) {
 /**
  * Access hook
  */
-function shortcut_access($op, $node) {
+function shortcut_access($op, $node, $account) {
   if ($op == 'create') {
-    return user_access('admin shortcuts');
+    return user_access('admin shortcuts', $account);
   }
 
-  return (user_access('view shortcuts'));
+  return (user_access('view shortcuts', $account));
 }
 
 /**
  * Menu Hook
  */
-function shortcut_menu($may_cache) {
+function shortcut_menu() {
+  // Menu definitions
   $items = array();
-
-  if (!$may_cache) {
-    // Load scripts
-    shortcut_load_scripts();
-    // Menu definitions
-    $items[] = array(
-        'path' => 'admin/settings/shortcut',
-        'title' => 'Keyboard Shortcuts',
-        'callback' => 'shortcut_page_form',
-        'access' => user_access('admin shortcuts'),
-        'description' => t('Administer the keyboard shortcuts that can be used in the site.'),
-    );
-  }
+  $items['admin/settings/shortcut'] = array(
+    'title' => 'Keyboard Shortcuts',
+    'page callback' => 'shortcut_page_form',
+    'access callback' => user_access('admin shortcuts'),
+    'description' => t('Administer the keyboard shortcuts that can be used in the site.'),
+  );
   return $items;
+}
+
+function shortcut_init() {
+  // Load scripts
+  shortcut_load_scripts();
 }
 
 /**
@@ -98,12 +106,16 @@ function shortcut_form($node) {
   $form['key_masks_values'] = array(
         '#type' => 'checkboxes',
         '#title' => t('Meta Keys'),
-        '#default_value' => explode(',', $node->keys_mask),
+        '#default_value' => array(
+            $node->keys_mask & SHORTCUT_MASK_ALT,
+            $node->keys_mask & SHORTCUT_MASK_CTRL,
+            $node->keys_mask & SHORTCUT_MASK_SHIFT,
+         ),
         '#required' => FALSE,
         '#options' => array(
-           'alt' => t('ALT Key'), 
-           'ctrl' => t('CTRL Key'), 
-           'shift' => t('SHIFT Key')
+           SHORTCUT_MASK_ALT => t('ALT Key'), 
+           SHORTCUT_MASK_CTRL => t('CTRL Key'), 
+           SHORTCUT_MASK_SHIFT => t('SHIFT Key')
   ),
         '#description' => t('You can specify which meta keys are part of the shortcut.'),
   );
@@ -135,7 +147,7 @@ function shortcut_form($node) {
         '#title' => t('Type of action or URL'),
         '#default_value' => $node->s_type,
         '#required' => TRUE,
-        '#options' => array('function' => t('Call a JS function'), 'path' => t('Go to an internal URL'), 'external_path' => t('Go to an external URL')),
+        '#options' => array(SHORTCUT_TYPE_FUNCTION => t('Call a JS function'), SHORTCUT_TYPE_PATH => t('Go to an internal URL'), SHORTCUT_TYPE_EXTERNAL => t('Go to an external URL')),
         '#description' => t('The type of action that will be executed when the shortcut get raised, it can be a call to a javascript function, or go to an internal drupal address or go to an externa internet address.'),
   );
   $form['s_action'] = array(
@@ -156,8 +168,8 @@ function shortcut_insert($node) {
     INSERT INTO {shortcut}
     (nid, keys_mask, char_text, char_code, s_type, s_action)
     VALUES
-    (%d, \'%s\', \'%s\', %s, \'%s\', \'%s\')
-  ' , $node->nid, shortcut_implode_masks($node->key_masks_values), $node->char_text
+    (%d, %d, \'%s\', %s, %d, \'%s\')
+  ' , $node->nid, array_sum($node->key_masks_values), $node->char_text
   , (empty($node->char_code)?'null':$node->char_code)
   , $node->s_type, $node->s_action);
 }
@@ -168,14 +180,14 @@ function shortcut_insert($node) {
 function shortcut_update($node) {
   db_query('
     UPDATE {shortcut}
-    SET keys_mask = \'%s\', 
+    SET keys_mask = %d, 
     char_text = \'%s\', 
     char_code = %s, 
-    s_type = \'%s\', 
+    s_type = %d, 
     s_action = \'%s\'
     WHERE nid = %d
   '
-  , shortcut_implode_masks($node->key_masks_values), $node->char_text
+  , array_sum($node->key_masks_values), $node->char_text
   , (empty($node->char_code)?'null':$node->char_code)
   , $node->s_type, $node->s_action, $node->nid);
 }
@@ -226,6 +238,14 @@ function shortcut_block($op = 'list', $delta = 0, $edit = array()) {
   }
 }
 
+function shortcut_theme(){
+  $functions = array(
+    'shortcut_block' => array('arguments' => array('shortcuts' => array())),
+    'shortcut_admin_list' => array('arguments' => array('shortcuts' => array())),
+  );
+  return $functions;
+}
+
 /**
  * Theme for the shortcuts block.
  */
@@ -264,7 +284,8 @@ function theme_shortcut_admin_list($shortcuts = array()) {
  */
 function shortcut_display_block_shortcuts() {
   $shortcuts = shortcut_get_list();
-  return theme('shortcut_block', $shortcuts);
+  $out = theme('shortcut_block', $shortcuts);
+  return $out;
 }
 
 /**
@@ -291,7 +312,6 @@ function shortcut_load_scripts() {
   $path = drupal_get_path('module', 'shortcut');
   drupal_add_js($path . '/shortcut.js', 'core');
   drupal_add_js('var debug = false;', 'inline');
-
   // Generate the javascript with the shortcut info.
   $shortcuts_script = '';
   $res = db_query('
@@ -299,28 +319,28 @@ function shortcut_load_scripts() {
         FROM {shortcut}
     ');
   while ($row = db_fetch_array($res)) {
-    $masks = split(',', $row['keys_mask']);
+    $masks = (int) $row['keys_mask'];
     if (empty($row['char_code'])) {
-      $shortcuts_script .= 'shortcutsPress.push({alt:' . (in_array('alt', $masks) ? 'true' : 'false')
-      .', ctrl:'.(in_array('ctrl', $masks)?'true':'false')
-      .', shift:'.(in_array('shift', $masks)?'true':'false')
-      .', win:'.(in_array('win', $masks)?'true':'false')
+      $shortcuts_script .= 'shortcutsPress.push({alt:' . ( $masks & SHORTCUT_MASK_ALT ? 'true' : 'false')
+      .', ctrl:'.( $masks & SHORTCUT_MASK_CTRL ? 'true' : 'false')
+      .', shift:'.( $masks & SHORTCUT_MASK_SHIFT ? 'true' : 'false')
+      .', win:'.( $masks & SHORTCUT_MASK_WIN ? 'true' : 'false')
       .', char_text:"'.$row['char_text']
-      .'", func_name:"'.($row['s_type'] == 'function'?$row['s_action']:'shortcut_call_path')
-      .'", param:"'.($row['s_type'] == 'function'?'':$row['s_action']).'" });'.chr(13);
+      .'", func_name:"'.($row['s_type'] == SHORTCUT_TYPE_FUNCTION ? $row['s_action'] : 'shortcut_call_path')
+      .'", param:"'.($row['s_type'] == SHORTCUT_TYPE_FUNCTION ? '' : $row['s_action']).'" });'.chr(13);
     }
     else {
-      $shortcuts_script .= 'shortcutsDown.push({alt:' . (in_array('alt', $masks) ? 'true' : 'false')
-      .', ctrl:'.(in_array('ctrl', $masks)?'true':'false')
-      .', shift:'.(in_array('shift', $masks)?'true':'false')
-      .', win:'.(in_array('win', $masks)?'true':'false')
+      $shortcuts_script .= 'shortcutsDown.push({alt:' . ( $masks & SHORTCUT_MASK_ALT ? 'true' : 'false')
+      .', ctrl:'.( $masks & SHORTCUT_MASK_CTRL ? 'true' : 'false')
+      .', shift:'.( $masks & SHORTCUT_MASK_SHIFT ? 'true' : 'false')
+      .', win:'.( $masks & SHORTCUT_MASK_WIN ? 'true' : 'false')
       .', char_code:'.$row['char_code']
-      .', func_name:"'.($row['s_type'] == 'function'?$row['s_action']:'shortcut_call_path')
-      .'", param:"'.($row['s_type'] == 'function'?'':$row['s_action']).'" });'.chr(13);
+      .', func_name:"'.($row['s_type'] == SHORTCUT_TYPE_FUNCTION ? $row['s_action'] : 'shortcut_call_path')
+      .'", param:"'.($row['s_type'] == SHORTCUT_TYPE_FUNCTION ? '' : $row['s_action']).'" });'.chr(13);
     }
   }
   drupal_add_js($shortcuts_script, 'inline');
-  drupal_add_js('shortcuts_parent_path = "' . url('/', null, null, false) . '";', 'inline');
+  drupal_add_js('shortcuts_parent_path = "' . url('', array('absolute' => false) ) . '";', 'inline');
 }
 
 /**
@@ -405,21 +425,26 @@ function shortcut_shortcut_to_string($shortcut = array()) {
 /**
  * Return a string of the meta keys formated from a shortcut.
  */
-function shortcut_get_mask_array($mask_list) {
+function shortcut_get_mask_array($mask) {
   $masks_string = '';
-  $masks = split(',', $mask_list);
-  foreach ($masks as $mask) {
-    switch ($mask) {
-      case 'alt':
+  $masks_array = array(
+    SHORTCUT_MASK_ALT, 
+    SHORTCUT_MASK_CTRL, 
+    SHORTCUT_MASK_SHIFT, 
+    SHORTCUT_MASK_WIN
+  );
+  foreach ($masks_array as $actual_mask) {
+    switch ($mask & $actual_mask) {
+      case SHORTCUT_MASK_ALT:
         $masked_text = t('ALT') . '+';
         break;
-      case 'ctrl':
+      case SHORTCUT_MASK_CTRL:
         $masked_text = t('CTRL') . '+';
         break;
-      case 'win':
+      case SHORTCUT_MASK_WIN:
         $masked_text = t('WIN') . '+';
         break;
-      case 'shift':
+      case SHORTCUT_MASK_SHIFT:
         $masked_text = t('SHIFT') . '+';
         break;
       default:
@@ -428,23 +453,4 @@ function shortcut_get_mask_array($mask_list) {
     $masks_string .= $masked_text;
   }
   return $masks_string;
-}
-
-/**
- * Take an array of meta keys and format it as they need to be to insert in the
- * database field.
- */
-function shortcut_implode_masks($masks_array) {
-  if (count($masks_array) == 0) {
-    return '';
-  }
-  $masks_texts = '';
-  $count_added = 0;
-  foreach ($masks_array as $mask) {
-    if (!$mask == 0) {
-      $masks_texts .= ($count_added>0 ? ',' : '') . "$mask";
-      $count_added++;
-    }
-  }
-  return $masks_texts;
 }

@@ -5,30 +5,34 @@
  * Implementation of hook_install().
  */
 function shortcut_install() {
-	switch ($GLOBALS['db_type']) {
-		case 'mysql':
-		case 'mysqli':
-			db_query("CREATE TABLE {shortcut} (
-			  nid int(10) unsigned NOT NULL AUTO_INCREMENT,
-			  keys_mask SET('ctrl', 'alt', 'shift', 'win') NOT NULL,
-			  char_text char(1),
-			  char_code tinyint,
-			  s_type enum('function', 'path', 'external_path') NOT NULL,
-			  s_action varchar(255) NOT NULL,
-			  PRIMARY KEY(nid),
-			  UNIQUE KEY masks(keys_mask, char_text, char_code)
-			  ) /*!40100 DEFAULT CHARACTER SET UTF8 */");
-			drupal_set_message(t('The shortcuts table has being created.'));
-			break;
-		default:
-		  drupal_set_message(t('This database type is not yet supported!'), 'error');
-	}
+  drupal_install_schema('shortcut');
 }
 
 /**
  * Implementation of hook_uninstall().
  */
 function shortcut_uninstall() {
-	db_query('DROP TABLE {shortcut}');
-	drupal_set_message(t('The shortcuts table has being removed.'));
+  drupal_uninstall_schema('shortcut');
+}
+
+/**
+ * Implementation of hook_schema().
+ */
+function shortcut_schema() {
+  $schema['shortcut'] = array(
+    'fields' => array(
+      'nid'    => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0, 'description' => 'The node id associated.'),
+      'keys_mask' => array('type' => 'int', 'not null' => TRUE, 'size' => 'tiny', 'default' => 0, 'description' => 'Mask containing the meta keys.'),
+      'char_text' => array('type' => 'char', 'not null' => FALSE, 'length' => 1, 'description' => 'Character key. Optional, could be used the char code instead.'),
+      'char_code' => array('type' => 'int', 'not null' => FALSE, 'size' => 'tiny', 'description' => 'Key code. Optional, could be used the char text instead.'),
+      's_type' => array('type' => 'int', 'not null' => TRUE, 'size' => 'tiny', 'default' => 0, 'description' => 'Integer that indicates the type of action.'),
+      's_action' => array('type' => 'varchar', 'not null' => TRUE, 'length' => 255, 'description' => 'The text that contains the action path or function name.'),
+    ),
+    'unique key' => array(
+      'masks' => array('key_mask', 'char_text', 'char_code'),
+    ),
+    'primary key' => array('nid'),
+    'description' => 'The extra information for each shortcut.',
+  );
+  return $schema;
 }
