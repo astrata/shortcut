@@ -71,7 +71,7 @@ function shortcut_menu() {
   $items['admin/settings/shortcut'] = array(
     'title' => 'Keyboard Shortcuts',
     'page callback' => 'shortcut_page_form',
-    'access callback' => user_access('admin shortcuts'),
+    'access arguments' => array('admin shortcuts'),
     'description' => t('Administer the keyboard shortcuts that can be used in the site.'),
   );
   return $items;
