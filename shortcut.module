@@ -264,17 +264,18 @@ function theme_shortcut_block($shortcuts = array()) {
 function theme_shortcut_admin_list($shortcuts = array()) {
   $headers = array(t('Shortcut'), t('Description'), t('Actions'));
   $rows = array();
+  $destination = drupal_get_destination();
   foreach ($shortcuts as $shortcut) {
     $shortcut_string = shortcut_shortcut_to_string($shortcut);
     $rows[] = array(
         $shortcut_string,
         $shortcut['title'],
-        l(t('Edit'), 'node/' . $shortcut['nid'] . '/edit', drupal_get_destination()) 
+        l(t('Edit'), 'node/' . $shortcut['nid'] . '/edit', array('query' => $destination)) 
         . ' | '
-        . l(t('Remove'), 'node/' . $shortcut['nid'] . '/delete', drupal_get_destination())
+        . l(t('Remove'), 'node/' . $shortcut['nid'] . '/delete', array('query' => $destination))
       );
   }
-  $output = l(t('Add a new shortcut'), 'node/add/shortcut', drupal_get_destination());
+  $output = l(t('Add a new shortcut'), 'node/add/shortcut', array('query' => $destination));
   $output .= theme('table', $headers, $rows, array('class' => 'shortcut_admin_list'));
   return $output;
 }
