@@ -6,8 +6,12 @@ shortcutsPress = new Array();
 shortcutsDown = new Array();
 shortcut_found = false;
 
-function shortcut_call_path(path){
-	document.location = shortcuts_parent_path + path;
+function shortcut_call_external_path(path){
+ document.location = path;
+}
+
+function shortcut_call_internal_path(path){
+ document.location = shortcuts_parent_path + path;
 }
 
 function processShortcutPress(e){
@@ -30,9 +34,9 @@ function processShortcutPress(e){
                 } else {
                     ev.cancelBubble = true;
                 }
-				debug_message('Press: '+shortcutsPress[i].func_name+'("'+shortcutsPress[i].param+'")');
-				eval(shortcutsPress[i].func_name+'("'+shortcutsPress[i].param+'")');
-                return false;
+				  debug_message('Press: '+shortcutsPress[i].func_name+'("'+shortcutsPress[i].param+'")');
+				  eval(shortcutsPress[i].func_name+'("'+shortcutsPress[i].param+'")');
+          return false;
 		}
 	}
 }

@@ -310,6 +310,7 @@ function shortcut_get_list() {
  */
 function shortcut_load_scripts() {
   // Load the javascript code
+  $use_clean_url = variable_get('clean_url', 0);
   $path = drupal_get_path('module', 'shortcut');
   drupal_add_js($path . '/shortcut.js', 'core');
   drupal_add_js('var debug = false;', 'inline');
@@ -321,14 +322,15 @@ function shortcut_load_scripts() {
     ');
   while ($row = db_fetch_array($res)) {
     $masks = (int) $row['keys_mask'];
+    $function_call_path = $row['s_type'] == SHORTCUT_TYPE_EXTERNAL ? 'shortcut_call_external_path' : 'shortcut_call_internal_path' ;
     if (empty($row['char_code'])) {
       $shortcuts_script .= 'shortcutsPress.push({alt:' . ( $masks & SHORTCUT_MASK_ALT ? 'true' : 'false')
       .', ctrl:'.( $masks & SHORTCUT_MASK_CTRL ? 'true' : 'false')
       .', shift:'.( $masks & SHORTCUT_MASK_SHIFT ? 'true' : 'false')
       .', win:'.( $masks & SHORTCUT_MASK_WIN ? 'true' : 'false')
       .', char_text:"'.$row['char_text']
-      .'", func_name:"'.($row['s_type'] == SHORTCUT_TYPE_FUNCTION ? $row['s_action'] : 'shortcut_call_path')
-      .'", param:"'.($row['s_type'] == SHORTCUT_TYPE_FUNCTION ? '' : $row['s_action']).'" });'.chr(13);
+      .'", func_name:"'.($row['s_type'] == SHORTCUT_TYPE_FUNCTION ? $row['s_action'] : $function_call_path)
+      .'", param:"'.($row['s_type'] == SHORTCUT_TYPE_FUNCTION ? '' : ($row['s_type'] == SHORTCUT_TYPE_PATH && !$use_clean_url?'?q=':'') . $row['s_action']).'" });'.chr(13);
     }
     else {
       $shortcuts_script .= 'shortcutsDown.push({alt:' . ( $masks & SHORTCUT_MASK_ALT ? 'true' : 'false')
@@ -336,8 +338,8 @@ function shortcut_load_scripts() {
       .', shift:'.( $masks & SHORTCUT_MASK_SHIFT ? 'true' : 'false')
       .', win:'.( $masks & SHORTCUT_MASK_WIN ? 'true' : 'false')
       .', char_code:'.$row['char_code']
-      .', func_name:"'.($row['s_type'] == SHORTCUT_TYPE_FUNCTION ? $row['s_action'] : 'shortcut_call_path')
-      .'", param:"'.($row['s_type'] == SHORTCUT_TYPE_FUNCTION ? '' : $row['s_action']).'" });'.chr(13);
+      .', func_name:"'.($row['s_type'] == SHORTCUT_TYPE_FUNCTION ? $row['s_action'] : $function_call_path)
+      .'", param:"'.($row['s_type'] == SHORTCUT_TYPE_FUNCTION ? '' : ($row['s_type'] == SHORTCUT_TYPE_PATH && !$use_clean_url?'?q=':'') . $row['s_action']).'" });'.chr(13);
     }
   }
   drupal_add_js($shortcuts_script, 'inline');
