@@ -1,4 +1,3 @@
-// $Id$
 var debug = false;
 
 shortcuts_parent_path = '';

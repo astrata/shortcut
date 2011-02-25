@@ -1,4 +1,3 @@
-; $Id$
 name = Keyboard shortcuts
 description = Allow keyboard shortcuts assignments in the page.
 core = 6.x
