@@ -282,9 +282,18 @@ function theme_shortcut_block($shortcuts = array()) {
 }
 
 function theme_shortcut_admin_list($shortcuts = array()) {
+
+  $destination = drupal_get_destination();
+  if(empty($shortcuts)) {
+    drupal_set_message(
+      t('There is not shortcuts created, create one !here',
+      array('!here' => l('here','node/add/shortcut', array('query' => $destination)))
+      )
+    );
+  }
+
   $headers = array(t('Shortcut'), t('Description'), t('Actions'));
   $rows = array();
-  $destination = drupal_get_destination();
   foreach ($shortcuts as $shortcut) {
     $shortcut_string = shortcut_shortcut_to_string($shortcut);
     $rows[] = array(
