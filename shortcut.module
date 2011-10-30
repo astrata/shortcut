@@ -72,9 +72,30 @@ function shortcut_menu() {
     'page callback' => 'shortcut_page_form',
     'access arguments' => array('admin shortcuts'),
     'description' => t('Administer the keyboard shortcuts that can be used in the site.'),
+    'type'        => MENU_NORMAL_ITEM
   );
+
+  $items['admin/settings/shortcut/list'] = array(
+    'title' =>  'Keyboard Shortcuts',
+    'type'  =>  MENU_DEFAULT_LOCAL_TASK,
+
+  );
+
+  $items['admin/settings/shortcut/add'] = array(
+    'title' =>  'Add new shortcut',
+    'type'  =>  MENU_LOCAL_TASK,
+    'access arguments'  =>  array('admin shortcuts'),
+    'page callback'     =>  'send_to_node_shortcut'
+  );
+
   return $items;
 }
+
+function send_to_node_shortcut() {
+  $destination = drupal_get_destination();
+  drupal_goto('node/add/shortcut',$destination);
+}
+
 
 function shortcut_init() {
   // Load scripts
@@ -274,7 +295,7 @@ function theme_shortcut_admin_list($shortcuts = array()) {
         . l(t('Remove'), 'node/' . $shortcut['nid'] . '/delete', array('query' => $destination))
       );
   }
-  $output = l(t('Add a new shortcut'), 'node/add/shortcut', array('query' => $destination));
+
   $output .= theme('table', $headers, $rows, array('class' => 'shortcut_admin_list'));
   return $output;
 }
