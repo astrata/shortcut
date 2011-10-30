@@ -189,9 +189,14 @@ function shortcut_insert($node) {
     (nid, keys_mask, char_text, char_code, s_type, s_action)
     VALUES
     (%d, %d, \'%s\', %s, %d, \'%s\')
-  ' , $node->nid, array_sum($node->key_masks_values), $node->char_text
-  , (empty($node->char_code)?'null':$node->char_code)
-  , $node->s_type, $node->s_action);
+  ', 
+    $node->nid, 
+    array_sum($node->key_masks_values), 
+    $node->char_text,
+    (empty($node->char_code) ? ord( strtoupper($node->char_text)) :$node->char_code),
+    $node->s_type, 
+    $node->s_action
+  );
 }
 
 /**
@@ -207,8 +212,9 @@ function shortcut_update($node) {
     s_action = \'%s\'
     WHERE nid = %d
   '
-  , array_sum($node->key_masks_values), $node->char_text
-  , (empty($node->char_code)?'null':$node->char_code)
+  , array_sum($node->key_masks_values), 
+  $node->char_text
+  , (empty($node->char_code)? ord( strtoupper($node->char_code)) : $node->char_code)
   , $node->s_type, $node->s_action, $node->nid);
 }
 
@@ -353,7 +359,7 @@ function shortcut_load_scripts() {
     $masks = (int) $row['keys_mask'];
     $function_call_path = $row['s_type'] == SHORTCUT_TYPE_EXTERNAL ? 'shortcut_call_external_path' : 'shortcut_call_internal_path' ;
     if (empty($row['char_code'])) {
-      $shortcuts_script .= 'shortcutsPress.push({alt:' . ( $masks & SHORTCUT_MASK_ALT ? 'true' : 'false')
+      $shortcuts_script .= 'shortcutsDown.push({alt:' . ( $masks & SHORTCUT_MASK_ALT ? 'true' : 'false')
       .', ctrl:'.( $masks & SHORTCUT_MASK_CTRL ? 'true' : 'false')
       .', shift:'.( $masks & SHORTCUT_MASK_SHIFT ? 'true' : 'false')
       .', win:'.( $masks & SHORTCUT_MASK_WIN ? 'true' : 'false')
@@ -372,7 +378,6 @@ function shortcut_load_scripts() {
     }
   }
   drupal_add_js($shortcuts_script, 'inline');
-  drupal_add_js('shortcuts_parent_path = "' . url('', array('absolute' => false) ) . '";', 'inline');
 }
 
 /**
