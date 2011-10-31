@@ -19,12 +19,15 @@ processShortcutDown = function(ev){
 	shortcut_found = false;
 	code = ev.keyCode;
 
-	for(i=0; i<shortcutsDown.length; i++){
-		if(
-      shortcutsDown[i].char_code == code 
-			&& shortcutsDown[i].alt == ev.altKey
-			&& shortcutsDown[i].ctrl == ev.ctrlKey
-			&& shortcutsDown[i].shift == ev.shiftKey){
+  for(i=0; i < Drupal.settings.shortcuts.length; i++) {
+    shortcutDown = Drupal.settings.shortcuts[i];
+
+    //we sum a empty string into the ev values for cast it his values to a string
+    if(
+      shortcutDown.char_code == code 
+      && shortcutDown.alt == ev.altKey+''
+      && shortcutDown.ctrl == ev.ctrlKey+''
+      && shortcutDown.shift == ev.shiftKey+''){
 
       if(ev.stopPropagation){
         ev.stopPropagation(true);
@@ -32,9 +35,10 @@ processShortcutDown = function(ev){
       } else {
         ev.cancelBubble = true;
       }
-      eval(shortcutsDown[i].func_name+'("'+shortcutsDown[i].param+'")');
+
+      eval(shortcutDown.func_name+'("'+shortcutDown.param+'")');
       shortcut_found = true;
       return false;
-		}
-	}
+    }
+  }
 }
