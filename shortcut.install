@@ -35,3 +35,16 @@ function shortcut_schema() {
   );
   return $schema;
 }
+
+function shortcut_update_6200() {
+  $shortcuts = db_query("SELECT nid, char_text, char_code FROM {shortcut}"); 
+  $ret = array();
+  while( $tmp = db_fetch_object($shortcuts) ) {
+    if(!empty($tmp->char_text)) {
+      $code = ord(strtoupper($tmp->char_text));
+      $ret[] = update_sql("UPDATE {shortcut} SET char_code = ".$code." WHERE nid = ".$tmp->nid);
+    }
+  }
+
+  return $ret;
+}
